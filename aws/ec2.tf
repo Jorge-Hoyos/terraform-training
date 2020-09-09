@@ -15,7 +15,8 @@ resource "aws_instance" "jenkins_instance" {
   ami                    = "ami-0c94855ba95c71c99"
   instance_type          = "t2.micro"
   key_name               = "ec2-kp"
-  vpc_security_group_ids = ["sg-0346f8eed50a7c90d"] #aws_security_group.jenkins_sg.id]
+  vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
+  iam_instance_profile   = aws_iam_instance_profile.jenkins_profile.name
   tags = {
     Name = "Jenkins-server"
   }
@@ -49,6 +50,11 @@ resource "aws_security_group" "jenkins_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+}
+
+resource "aws_iam_instance_profile" "jenkins_profile" {
+  name = "jenkins-profile"
+  role = aws_iam_role.jenkins_role.name
 }
 
 resource "aws_iam_role" "jenkins_role" {
