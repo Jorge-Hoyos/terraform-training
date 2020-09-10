@@ -47,8 +47,7 @@ resource "aws_instance" "jenkins_instance_9" {
       "sudo usermod -aG docker $USER",
       "sudo systemctl status docker",
       "sudo docker pull -q jenkins/jenkins:lts",
-      "sudo docker run -p 8080:8080 -d --name jenkins_server jenkins/jenkins:lts",
-      "sudo docker exec jenkins_server cat /var/jenkins_home/secrets/initialAdminPassword"
+      "sudo docker run -p 8080:8080 -d --name jenkins_server jenkins/jenkins:lts"
     ]
   }
 }
@@ -109,6 +108,13 @@ resource "aws_iam_role_policy" "jenkins_role_policy" {
 resource "aws_s3_bucket" "jenkins_s3_data" {
   acl    = "private"
   bucket = "jenkins-s3-data"
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
+    }
+  }
   versioning {
     enabled = true
   }
@@ -117,8 +123,10 @@ resource "aws_s3_bucket" "jenkins_s3_data" {
 resource "aws_s3_bucket_public_access_block" "jenkins_s3_public_access_block" {
   bucket = aws_s3_bucket.jenkins_s3_data.id
 
-  block_public_acls   = true
-  block_public_policy = true
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
 
 data "aws_iam_policy_document" "jenkins_assume_role_policy" {
