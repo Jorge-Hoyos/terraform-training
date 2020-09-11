@@ -6,28 +6,27 @@ terraform {
   }
 }
 
-variable "default_tags" {
-  type = map
-  default = {
-    project = "jenkins"
-  }
-}
-
 provider "aws" {
   profile = "default"
-  region  = "us-east-1"
+  region  = var.region
 }
 
 resource "aws_instance" "jenkins_instance_9" {
-  ami                    = "ami-0c94855ba95c71c99"
+  ami                    = var.amis[var.region]
   instance_type          = "t2.micro"
   key_name               = aws_key_pair.jenkins_kp.key_name
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.jenkins_profile.name
-  tags = {
-    Name    = "Jenkins-server"
-    project = "Jenkins"
-  }
+  # for_each = var.default_tags
+
+  tags = merge(
+    var.default_tags,
+    {
+      resource = "ec2-server",
+      Name = "Jenkins-server",
+    }
+  )
+
   provisioner "local-exec" {
     command = "echo ${self.public_ip} > ip_address.txt"
   }
@@ -60,6 +59,7 @@ resource "aws_key_pair" "jenkins_kp" {
 resource "aws_security_group" "jenkins_sg" {
   name        = "jenkins-sg"
   description = "Security group of jenkins server"
+  tags = var.default_tags
   vpc_id      = "vpc-102ad56d"
 
   ingress {
@@ -67,7 +67,7 @@ resource "aws_security_group" "jenkins_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["181.58.39.207/32"]
+    cidr_blocks = var.my_ip_cidr
   }
 
   ingress {
@@ -94,9 +94,10 @@ resource "aws_iam_instance_profile" "jenkins_profile" {
 }
 
 resource "aws_iam_role" "jenkins_role" {
+  assume_role_policy = data.aws_iam_policy_document.jenkins_assume_role_policy.json
   name               = "jenkins-role"
   path               = "/jenkins/"
-  assume_role_policy = data.aws_iam_policy_document.jenkins_assume_role_policy.json
+  tags = var.default_tags
 }
 
 resource "aws_iam_role_policy" "jenkins_role_policy" {
@@ -108,6 +109,7 @@ resource "aws_iam_role_policy" "jenkins_role_policy" {
 resource "aws_s3_bucket" "jenkins_s3_data" {
   acl    = "private"
   bucket = "jenkins-s3-data"
+  tags = var.default_tags
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
