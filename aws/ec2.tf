@@ -23,7 +23,7 @@ resource "aws_instance" "jenkins_instance_9" {
     var.default_tags,
     {
       resource = "ec2-server",
-      Name = "Jenkins-server",
+      Name     = "Jenkins-server",
     }
   )
 
@@ -51,6 +51,12 @@ resource "aws_instance" "jenkins_instance_9" {
   }
 }
 
+resource "aws_eip" "jenkins_eip" {
+  instance = aws_instance.jenkins_instance_9.id
+  tags     = var.default_tags
+  vpc      = true
+}
+
 resource "aws_key_pair" "jenkins_kp" {
   key_name   = "jenkins-kp"
   public_key = file("~/Documents/keys/terraform.pub")
@@ -59,7 +65,7 @@ resource "aws_key_pair" "jenkins_kp" {
 resource "aws_security_group" "jenkins_sg" {
   name        = "jenkins-sg"
   description = "Security group of jenkins server"
-  tags = var.default_tags
+  tags        = var.default_tags
   vpc_id      = "vpc-102ad56d"
 
   ingress {
@@ -97,7 +103,7 @@ resource "aws_iam_role" "jenkins_role" {
   assume_role_policy = data.aws_iam_policy_document.jenkins_assume_role_policy.json
   name               = "jenkins-role"
   path               = "/jenkins/"
-  tags = var.default_tags
+  tags               = var.default_tags
 }
 
 resource "aws_iam_role_policy" "jenkins_role_policy" {
@@ -109,7 +115,7 @@ resource "aws_iam_role_policy" "jenkins_role_policy" {
 resource "aws_s3_bucket" "jenkins_s3_data" {
   acl    = "private"
   bucket = "jenkins-s3-data"
-  tags = var.default_tags
+  tags   = var.default_tags
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
@@ -129,6 +135,26 @@ resource "aws_s3_bucket_public_access_block" "jenkins_s3_public_access_block" {
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
+}
+
+resource "aws_resourcegroups_group" "jenkins_resource_group" {
+  name = "jenkins-resource-group"
+
+  resource_query {
+    query = <<JSON
+      {
+        "ResourceTypeFilters": [
+          "AWS::AllSupported"
+        ],
+        "TagFilters": [
+          {
+            "Key": "creator",
+            "Values": ["terraform"]
+          }
+        ]
+      }
+    JSON
+  }
 }
 
 data "aws_iam_policy_document" "jenkins_assume_role_policy" {
