@@ -23,7 +23,7 @@ resource "aws_instance" "jenkins_instance_9" {
     var.default_tags,
     {
       resource = "ec2-server",
-      Name     = "Jenkins-server",
+      Name     = "Jenkins-server"
     }
   )
 
@@ -53,8 +53,13 @@ resource "aws_instance" "jenkins_instance_9" {
 
 resource "aws_eip" "jenkins_eip" {
   instance = aws_instance.jenkins_instance_9.id
-  tags     = var.default_tags
-  vpc      = true
+  tags = merge(
+    var.default_tags,
+    {
+      Name = "jenkins-eip"
+    }
+  )
+  vpc = true
 }
 
 resource "aws_key_pair" "jenkins_kp" {
