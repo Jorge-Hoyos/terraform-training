@@ -8,3 +8,4 @@ terraform apply -var="region=us-east-1"
 terraform apply \
   -var-file="secret.tfvars" \
   -var-file="production.tfvars"
+terraform output ip
