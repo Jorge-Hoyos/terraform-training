@@ -46,8 +46,9 @@ resource "aws_instance" "jenkins_instance_9" {
       "sudo usermod -aG docker $USER",
       "sudo systemctl status docker",
       "git clone https://github.com/Jorge-Hoyos/jenkins-training.git",
+      "export MY_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)",
       "sudo docker build -t jorge:lts jenkins-training/docker-image/",
-      "sudo docker run -p 8080:8080 -d --name jorge --mount source=jenkins_data,target=/var/jenkins_home jorge:lts"
+      "sudo docker run -p 8080:8080 -d -e MY_IP --name jorge --mount source=jenkins_data,target=/var/jenkins_home jorge:lts"
     ]
   }
 }
