@@ -40,7 +40,7 @@ resource "aws_instance" "jenkins_instance_9" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo yum -q -y install docker",
+      "sudo yum -q -y install docker git",
       "sudo groupadd docker",
       "sudo systemctl start docker",
       "sudo usermod -aG docker $USER",
