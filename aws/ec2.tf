@@ -34,7 +34,7 @@ resource "aws_instance" "jenkins_instance_9" {
   connection {
     type        = "ssh"
     user        = "ec2-user"
-    private_key = file("~/Documents/keys/terraform")
+    private_key = file("~/Documents/aws/keys/terraform")
     host        = self.public_ip
   }
 
@@ -45,8 +45,9 @@ resource "aws_instance" "jenkins_instance_9" {
       "sudo systemctl start docker",
       "sudo usermod -aG docker $USER",
       "sudo systemctl status docker",
-      "sudo docker pull -q jenkins/jenkins:lts",
-      "sudo docker run -p 8080:8080 -d --name jenkins_server jenkins/jenkins:lts"
+      "git clone https://github.com/Jorge-Hoyos/jenkins-training.git",
+      "sudo docker build -t jorge:lts jenkins-training/docker-image/",
+      "sudo docker run -p 8080:8080 -d --name jorge --mount source=jenkins_data,target=/var/jenkins_home jorge:lts"
     ]
   }
 }
@@ -64,7 +65,7 @@ resource "aws_eip" "jenkins_eip" {
 
 resource "aws_key_pair" "jenkins_kp" {
   key_name   = "jenkins-kp"
-  public_key = file("~/Documents/keys/terraform.pub")
+  public_key = file("~/Documents/aws/keys/terraform.pub")
 }
 
 resource "aws_security_group" "jenkins_sg" {
