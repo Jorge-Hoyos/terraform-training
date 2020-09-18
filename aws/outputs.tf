@@ -1,5 +1,5 @@
 output "jenkins-ip" {
-  value = aws_eip.jenkins_eip.public_ip
+  value = aws_instance.jenkins_instance.public_ip
 }
 
 output "rol-arn" {

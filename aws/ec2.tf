@@ -11,7 +11,7 @@ provider "aws" {
   region  = var.region
 }
 
-resource "aws_instance" "jenkins_instance_9" {
+resource "aws_instance" "jenkins_instance" {
   ami                    = var.amis[var.region]
   instance_type          = "t2.micro"
   key_name               = aws_key_pair.jenkins_kp.key_name
@@ -38,31 +38,29 @@ resource "aws_instance" "jenkins_instance_9" {
     host        = self.public_ip
   }
 
+  provisioner "file" {
+    source      = "script.sh"
+    destination = "/tmp/script.sh"
+  }
+
   provisioner "remote-exec" {
     inline = [
-      "sudo yum -q -y install docker git",
-      "sudo groupadd docker",
-      "sudo systemctl start docker",
-      "sudo usermod -aG docker $USER",
-      "sudo systemctl status docker",
-      "git clone https://github.com/Jorge-Hoyos/jenkins-training.git",
-      "export MY_IP=$(curl http://169.254.169.254/latest/meta-data/public-ipv4)",
-      "sudo docker build -t jorge:lts jenkins-training/docker-image/",
-      "sudo docker run -p 8080:8080 -d -e MY_IP --name jorge --mount source=jenkins_data,target=/var/jenkins_home jorge:lts"
+      "chmod +x /tmp/script.sh",
+      "/tmp/script.sh ${self.public_ip}"
     ]
   }
 }
 
-resource "aws_eip" "jenkins_eip" {
-  instance = aws_instance.jenkins_instance_9.id
-  tags = merge(
-    var.default_tags,
-    {
-      Name = "jenkins-eip"
-    }
-  )
-  vpc = true
-}
+# resource "aws_eip" "jenkins_eip" {
+#   instance = aws_instance.jenkins_instance.id
+#   tags = merge(
+#     var.default_tags,
+#     {
+#       Name = "jenkins-eip"
+#     }
+#   )
+#   vpc = true
+# }
 
 resource "aws_key_pair" "jenkins_kp" {
   key_name   = "jenkins-kp"
