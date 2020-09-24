@@ -18,6 +18,7 @@ resource "aws_instance" "jenkins_instance" {
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.jenkins_profile.name
   # for_each = var.default_tags
+  depends_on = [aws_ssm_parameter.slack_secret]
 
   tags = merge(
     var.default_tags,
@@ -51,16 +52,30 @@ resource "aws_instance" "jenkins_instance" {
   }
 }
 
-# resource "aws_eip" "jenkins_eip" {
-#   instance = aws_instance.jenkins_instance.id
-#   tags = merge(
-#     var.default_tags,
-#     {
-#       Name = "jenkins-eip"
-#     }
-#   )
-#   vpc = true
-# }
+/* resource "aws_eip" "jenkins_eip" {
+  instance = aws_instance.jenkins_instance.id
+  tags = merge(
+    var.default_tags,
+    {
+      Name = "jenkins-eip"
+    }
+  )
+  vpc = true
+} */
+
+resource "aws_ssm_parameter" "slack_secret" {
+  name        = "/slack/secret"
+  description = "The secret of slack to push notifications"
+  type        = "SecureString"
+  value       = data.local_file.slack_secret.content
+}
+
+resource "aws_ssm_parameter" "github_password" {
+  name        = "/github/password"
+  description = "The password of github account"
+  type        = "SecureString"
+  value       = data.local_file.github_password.content
+}
 
 resource "aws_key_pair" "jenkins_kp" {
   key_name   = "jenkins-kp"
@@ -178,4 +193,11 @@ data "aws_iam_policy_document" "jenkins_policy" {
     actions   = ["*"]
     resources = ["*"]
   }
+}
+
+data "local_file" "slack_secret" {
+  filename = "/home/jorge.hoyos/Documents/slack.txt"
+}
+data "local_file" "github_password" {
+  filename = "/home/jorge.hoyos/Documents/github.txt"
 }
