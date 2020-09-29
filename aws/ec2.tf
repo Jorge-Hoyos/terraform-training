@@ -18,7 +18,7 @@ resource "aws_instance" "jenkins_instance" {
   vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
   iam_instance_profile   = aws_iam_instance_profile.jenkins_profile.name
   # for_each = var.default_tags
-  depends_on = [aws_ssm_parameter.slack_secret]
+  depends_on = [aws_ssm_parameter.slack_secret_parameter]
 
   tags = merge(
     var.default_tags,
@@ -61,9 +61,16 @@ resource "aws_instance" "jenkins_instance" {
     }
   )
   vpc = true
+}
+
+resource "aws_ssm_parameter" "jenkins_eip_parameter" {
+  name        = "/jekins/ip"
+  description = "IP of the jenkins server"
+  type        = "SecureString"
+  value       = aws_eip.jenkins_eip.public_ip
 } */
 
-resource "aws_ssm_parameter" "slack_secret" {
+resource "aws_ssm_parameter" "slack_secret_parameter" {
   name        = "/slack/secret"
   description = "The secret of slack to push notifications"
   type        = "SecureString"
@@ -75,6 +82,34 @@ resource "aws_ssm_parameter" "github_password" {
   description = "The password of github account"
   type        = "SecureString"
   value       = data.local_file.github_password.content
+}
+
+resource "aws_ssm_association" "jenkins_stop_instance" {
+  name                = "AWS-StopEC2Instance"
+  association_name    = "stop_jenkins_instance"
+  schedule_expression = "cron(0 0 23 ? * * *)"
+  parameters = {
+    "InstanceId"           = aws_instance.jenkins_instance.id
+    "AutomationAssumeRole" = aws_iam_role.jenkins_role.arn
+  }
+  output_location {
+    s3_bucket_name = aws_s3_bucket.jenkins_s3_data.id
+    s3_key_prefix  = "automation/stop"
+  }
+}
+
+resource "aws_ssm_association" "jenkins_start_instance" {
+  name                = "AWS-StartEC2Instance"
+  association_name    = "start_jenkins_instance"
+  schedule_expression = "cron(0 0 11 ? * * *)"
+  parameters = {
+    "InstanceId"           = aws_instance.jenkins_instance.id
+    "AutomationAssumeRole" = aws_iam_role.jenkins_role.arn
+  }
+  output_location {
+    s3_bucket_name = aws_s3_bucket.jenkins_s3_data.id
+    s3_key_prefix  = "automation/start"
+  }
 }
 
 resource "aws_key_pair" "jenkins_kp" {
@@ -181,8 +216,10 @@ data "aws_iam_policy_document" "jenkins_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
+      type = "Service"
+      identifiers = ["ec2.amazonaws.com",
+        "ssm.amazonaws.com"
+      ]
     }
   }
 }

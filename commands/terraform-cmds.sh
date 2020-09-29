@@ -9,3 +9,5 @@ terraform apply \
   -var-file="secret.tfvars" \
   -var-file="production.tfvars"
 terraform output ip
+terraform taint resource
+terraform destroy -target aws_instance.jenkins_instance
