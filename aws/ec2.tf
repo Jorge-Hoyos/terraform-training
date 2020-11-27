@@ -84,102 +84,6 @@ resource "aws_ssm_parameter" "github_password" {
   value       = data.local_file.github_password.content
 }
 
-resource "aws_ssm_association" "jenkins_stop_instance_association" {
-  name                = "AWS-StopEC2Instance"
-  association_name    = "stop_jenkins_instance"
-  schedule_expression = "cron(0 0 23 ? * * *)"
-  parameters = {
-    "InstanceId"           = aws_instance.jenkins_instance.id
-    "AutomationAssumeRole" = aws_iam_role.jenkins_role.arn
-  }
-  output_location {
-    s3_bucket_name = aws_s3_bucket.jenkins_s3_data.id
-    s3_key_prefix  = "automation/stop"
-  }
-}
-
-resource "aws_ssm_association" "jenkins_start_instance_association" {
-  name                = aws_ssm_document.jenkins_start_server.name
-  association_name    = "start_jenkins_instance"
-  schedule_expression = "cron(0 0 11 ? * * *)"
-  parameters = {
-    "InstanceId"           = aws_instance.jenkins_instance.id
-    "AutomationAssumeRole" = aws_iam_role.jenkins_role.arn
-  }
-  output_location {
-    s3_bucket_name = aws_s3_bucket.jenkins_s3_data.id
-    s3_key_prefix  = "automation/start"
-  }
-}
-
-resource "aws_ssm_document" "jenkins_start_docker" {
-  name          = "jenkins_start_docker"
-  document_type = "Command"
-
-  content = <<DOC
-  {
-    "schemaVersion": "2.2",
-    "description": "Run docker",
-    "parameters": {
-    },
-    "mainSteps": [
-      {
-        "action": "aws:runShellScript",
-        "name": "startDokcer",
-        "inputs": {
-          "runCommand": [
-            "sudo systemctl restart docker",
-            "docker ps -a",
-            "docker start jorge"
-          ]
-        }
-      }
-    ]
-  }
-DOC
-}
-
-resource "aws_ssm_document" "jenkins_start_server" {
-  name          = "jenkins_start_server"
-  document_type = "Automation"
-
-  content = <<DOC
-  {
-    "schemaVersion": "0.3",
-    "description": "Check ip configuration of a Linux instance.",
-    "assumeRole": "{{ AutomationAssumeRole }}",
-    "parameters": {
-      "InstanceId": {
-        "type": "StringList",
-        "description": "(Required) EC2 Instance(s) to start"
-      },
-      "AutomationAssumeRole": {
-        "type": "String",
-        "description": "(Optional) The ARN of the role that allows Automation to perform the actions on your behalf."
-      }
-    },
-    "mainSteps": [
-      {
-        "name": "startInstances",
-        "action": "aws:changeInstanceState",
-        "inputs": {
-          "InstanceIds": "{{ InstanceId }}",
-          "DesiredState": "running"
-        }
-      },
-      {
-        "name": "runStartDockerCommand",
-        "action": "aws:runCommand",
-        "inputs": {
-          "DocumentName": "jenkins_start_docker",
-          "InstanceIds": "{{ InstanceId }}"
-        }
-      }
-    ]
-  }
-DOC
-}
-
 resource "aws_key_pair" "jenkins_kp" {
   key_name   = "jenkins-kp"
   public_key = file("~/Documents/aws/keys/terraform.pub")
@@ -264,6 +168,7 @@ resource "aws_resourcegroups_group" "jenkins_resource_group" {
   name = "jenkins-resource-group"
 
   resource_query {
+    # This is called the Heredoc syntax <<JSON. write large bloc of text with a token
     query = <<JSON
       {
         "ResourceTypeFilters": [
@@ -284,10 +189,8 @@ data "aws_iam_policy_document" "jenkins_assume_role_policy" {
   statement {
     actions = ["sts:AssumeRole"]
     principals {
-      type = "Service"
-      identifiers = ["ec2.amazonaws.com",
-        "ssm.amazonaws.com"
-      ]
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
     }
   }
 }

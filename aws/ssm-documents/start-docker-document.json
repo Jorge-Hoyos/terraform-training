@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "2.2",
+  "description": "Run docker",
+  "parameters": {},
+  "mainSteps": [{
+    "action": "aws:runShellScript",
+    "name": "startDokcer",
+    "inputs": {
+      "runCommand": [
+        "sudo systemctl restart docker",
+        "docker ps -a",
+        "docker start jorge"
+      ]
+    }
+  }]
+}

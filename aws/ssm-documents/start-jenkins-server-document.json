@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "0.3",
+  "description": "Check ip configuration of a Linux instance.",
+  "assumeRole": "{{ AutomationAssumeRole }}",
+  "parameters": {
+    "InstanceId": {
+      "type": "StringList",
+      "description": "(Required) EC2 Instance(s) to start"
+    },
+    "AutomationAssumeRole": {
+      "type": "String",
+      "description": "(Optional) The ARN of the role that allows Automation to perform the actions on your behalf.",
+      "default": ""
+    }
+  },
+  "mainSteps": [{
+      "name": "startInstances",
+      "action": "aws:changeInstanceState",
+      "inputs": {
+        "InstanceIds": "{{ InstanceId }}",
+        "DesiredState": "running"
+      }
+    },
+    {
+      "name": "runStartDockerCommand",
+      "action": "aws:runCommand",
+      "inputs": {
+        "DocumentName": "jenkins_start_docker",
+        "InstanceIds": "{{ InstanceId }}"
+      }
+    }
+  ]
+}
